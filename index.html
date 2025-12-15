@@ -84,7 +84,7 @@
     haritaResmi.src = "harita.jpg"; 
 
     // OYUNCU
-    const oyuncu = { x: 3159, y: 5064, w: 20, h: 20, hiz: 400 }; 
+    const oyuncu = { x: 2855, y: 4864, w: 20, h: 20, hiz: 400 }; 
     let kamera = { x: 0, y: 0 };
     
     // Analog Giriş Değerleri (Joystick veya Klavye'den gelen -1 ile 1 arası değerler)
@@ -331,7 +331,14 @@
 
         // Oyuncu
         ctx.fillStyle = editorModu ? "blue" : "yellow"; 
-        ctx.fillRect(oyuncu.x - kamera.x, oyuncu.y - kamera.y, oyuncu.w, oyuncu.h);
+        // Oyuncu
+        ctx.fillStyle = editorModu ? "blue" : "yellow"; 
+        
+        ctx.beginPath();
+        // Kare çizimi sol üstten başlar, daire merkezden çizilir. 
+        // O yüzden x ve y'ye genişliğin yarısını (w/2) ekleyerek merkezi buluyoruz.
+        ctx.arc(oyuncu.x - kamera.x + oyuncu.w/2, oyuncu.y - kamera.y + oyuncu.h/2, oyuncu.w/2, 0, Math.PI * 2);
+        ctx.fill();
 
         // Editör Çizgileri
         if (editorModu) {
