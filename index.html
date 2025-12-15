@@ -3,45 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>YTU Map</title>
+    <title>YTU Map - Gelişmiş</title>
     <style>
-        body {
-            background-color: #222; margin: 0;
-            display: flex; flex-direction: column; align-items: center;
-            height: 100vh; overflow: hidden; color: white; font-family: monospace;
-            touch-action: none; 
+        html, body {
+            width: 100%; height: 100%; margin: 0; padding: 0;
+            background-color: #222; overflow: hidden; 
+            touch-action: none; /* Telefonda kaydırmayı engeller */
+            font-family: monospace; color: white;
         }
         canvas {
-            background-color: black; width: 1280px; max-width: 100%; height: auto; display: block;
+            display: block; width: 100%; height: 100%; background-color: black;
         }
         #bilgi-paneli {
             display: none; 
             background: #333; width: 100%; padding: 5px; text-align: center;
-            border-bottom: 2px solid #555; font-size: 14px;
+            border-bottom: 2px solid #555; font-size: 14px; position: absolute; top: 0; z-index: 5;
         }
         #cikti-kutusu {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             background: white; color: black; padding: 20px; display: none;
-            border: 5px solid red; z-index: 10; text-align: center;
+            border: 5px solid red; z-index: 20; text-align: center;
         }
         textarea { width: 400px; height: 200px; margin-top: 10px; }
         
         #joystick-zone {
-            position: absolute; bottom: 30px; right: 30px; 
-            width: 120px; height: 120px; z-index: 10;
+            position: absolute; bottom: 40px; right: 40px; 
+            width: 140px; height: 140px; z-index: 10;
         }
         #joystick-base {
             width: 100%; height: 100%;
             background: rgba(255, 255, 255, 0.1);
-            border: 2px solid rgba(255, 255, 255, 0.5);
+            border: 2px solid rgba(255, 255, 255, 0.4);
             border-radius: 50%; position: relative;
         }
         #joystick-stick {
-            width: 50px; height: 50px;
+            width: 60px; height: 60px;
             background: rgba(255, 255, 255, 0.8);
             border-radius: 50%; position: absolute;
             top: 50%; left: 50%; transform: translate(-50%, -50%); 
-            pointer-events: none; box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            pointer-events: none; box-shadow: 0 0 15px rgba(0,0,0,0.5);
         }
     </style>
 </head>
@@ -52,7 +52,7 @@
     <span style="color:cyan">[SPACE]: Nokta Ekle | [P]: Kodu Al</span>
 </div>
 
-<canvas id="oyunTuvali" width="1280" height="960"></canvas>
+<canvas id="oyunTuvali"></canvas>
 
 <div id="cikti-kutusu">
     <h3>Bu Kodu Kopyala!</h3>
@@ -71,26 +71,36 @@
     const ctx = canvas.getContext("2d");
     const durumLabel = document.getElementById("durum-metni");
 
-    // --- SETTINGS ---
+    // --- EKRAN BOYUTLANDIRMA (TAM EKRAN ÇÖZÜMÜ) ---
+    function ekranAyarla() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', ekranAyarla);
+    ekranAyarla(); // Başlangıçta ayarla
+
+    // --- AYARLAR ---
     const haritaResmi = new Image();
     haritaResmi.src = "harita.jpg"; 
 
-    // PLAYER
-    // Note: I increased 'hiz' (speed) significantly because we are now using seconds, not frames.
-    // 400 = 400 pixels per second.
-        const oyuncu = { x: 3159, y: 5064, w: 20, h: 20, hiz: 400 }; 
+    // OYUNCU
+    const oyuncu = { x: 3159, y: 5064, w: 20, h: 20, hiz: 400 }; 
     let kamera = { x: 0, y: 0 };
     
-    // --- EDITOR VARIABLES ---
+    // Analog Giriş Değerleri (Joystick veya Klavye'den gelen -1 ile 1 arası değerler)
+    let inputVector = { x: 0, y: 0 };
+    
+    // --- EDİTÖR DEĞİŞKENLERİ ---
     let editorModu = false; 
     
-    // Obstacles
+    // Engeller (Senin verilerin)
     let engeller = [[{"x":2246,"y":683},{"x":1103,"y":1362},{"x":766,"y":742},{"x":1721,"y":163}],[{"x":2314,"y":749},{"x":2139,"y":842},{"x":2554,"y":1593},{"x":2812,"y":1585}],[{"x":2817,"y":1592},{"x":2909,"y":1457},{"x":2315,"y":739},{"x":2326,"y":753}],[{"x":1215,"y":1442},{"x":2141,"y":2070},{"x":2456,"y":1665},{"x":2026,"y":913}],[{"x":2575,"y":1691},{"x":2312,"y":2045},{"x":2775,"y":2438},{"x":3293,"y":1789}],[{"x":3286,"y":1784},{"x":4162,"y":2426},{"x":3569,"y":2990},{"x":2778,"y":2441}],[{"x":3562,"y":3024},{"x":4331,"y":3496},{"x":4343,"y":2971},{"x":4167,"y":2426}],[{"x":2817,"y":2590},{"x":3444,"y":3090},{"x":2446,"y":4389},{"x":1799,"y":3872}],[{"x":2544,"y":4497},{"x":3005,"y":3921},{"x":4039,"y":4871},{"x":3406,"y":5195}],[{"x":4127,"y":4783},{"x":4234,"y":3761},{"x":3505,"y":3211},{"x":3170,"y":3650}],[{"x":4383,"y":3787},{"x":4222,"y":4913},{"x":5153,"y":5249},{"x":5271,"y":4581}],[{"x":2258,"y":2246},{"x":1873,"y":2819},{"x":2151,"y":3150},{"x":2628,"y":2490}],[{"x":1346,"y":2635},{"x":1888,"y":2052},{"x":2147,"y":2239},{"x":1708,"y":2895}],[{"x":1276,"y":1630},{"x":1789,"y":1992},{"x":1096,"y":2778},{"x":810,"y":2473}],[{"x":766,"y":737},{"x":549,"y":939},{"x":729,"y":1716},{"x":1110,"y":1367}],[{"x":1044,"y":1408},{"x":1249,"y":1557},{"x":744,"y":2429},{"x":605,"y":2402}],[{"x":747,"y":2429},{"x":738,"y":2526},{"x":616,"y":2552},{"x":599,"y":2406}],[{"x":736,"y":2529},{"x":759,"y":2648},{"x":616,"y":2724},{"x":616,"y":2552}],[{"x":763,"y":2644},{"x":923,"y":2842},{"x":709,"y":2976},{"x":614,"y":2718}],[{"x":919,"y":2847},{"x":1134,"y":2848},{"x":1153,"y":2996},{"x":783,"y":2922}],[{"x":1138,"y":2869},{"x":1317,"y":2751},{"x":1386,"y":2951},{"x":1206,"y":2959}],[{"x":1315,"y":2757},{"x":2038,"y":3225},{"x":1828,"y":3354},{"x":1296,"y":3039}],[{"x":3078,"y":1570},{"x":3642,"y":1158},{"x":3966,"y":1212},{"x":3904,"y":2035}],[{"x":3908,"y":2029},{"x":4298,"y":2464},{"x":4265,"y":2136},{"x":3947,"y":1714}],[{"x":2026,"y":3239},{"x":1582,"y":4052},{"x":1010,"y":3703},{"x":1357,"y":3044}],[{"x":1577,"y":4035},{"x":1367,"y":4948},{"x":1083,"y":4594},{"x":1340,"y":3901}],[{"x":1381,"y":4946},{"x":1369,"y":5117},{"x":1210,"y":5087},{"x":1301,"y":4763}],[{"x":1790,"y":5621},{"x":1329,"y":5106},{"x":1245,"y":5293},{"x":1565,"y":5646}],[{"x":1773,"y":5620},{"x":1962,"y":5676},{"x":1856,"y":5779},{"x":1609,"y":5635}],[{"x":1462,"y":5092},{"x":1994,"y":5598},{"x":2673,"y":4758},{"x":1735,"y":3972}],[{"x":2111,"y":5651},{"x":2729,"y":4819},{"x":3444,"y":5341},{"x":2458,"y":5876}],[{"x":2459,"y":5878},{"x":3443,"y":5342},{"x":3832,"y":5568},{"x":3560,"y":5840}],[{"x":3599,"y":5298},{"x":4076,"y":4982},{"x":4342,"y":5139},{"x":3942,"y":5535}],[{"x":4047,"y":4865},{"x":3754,"y":4443},{"x":3024,"y":3891},{"x":2990,"y":3930}],[{"x":1853,"y":5733},{"x":2616,"y":6043},{"x":2211,"y":6097},{"x":1800,"y":5835}],[{"x":2592,"y":6043},{"x":3564,"y":5906},{"x":3367,"y":6127},{"x":2878,"y":6157}],[{"x":3576,"y":5918},{"x":4351,"y":5322},{"x":4351,"y":5829},{"x":3999,"y":5972}],[{"x":4363,"y":5239},{"x":5167,"y":5388},{"x":4935,"y":5704},{"x":4518,"y":5668}],[{"x":4391,"y":5288},{"x":4333,"y":5322},{"x":4319,"y":5283},{"x":4375,"y":5254}],[{"x":2207,"y":684},{"x":2278,"y":795},{"x":2357,"y":762},{"x":2267,"y":634}],[{"x":2862,"y":1457},{"x":3160,"y":1546},{"x":3154,"y":1431},{"x":2940,"y":1351}],[{"x":4294,"y":2468},{"x":4419,"y":2880},{"x":4480,"y":3193},{"x":4638,"y":2683}],[{"x":4476,"y":3181},{"x":4443,"y":3591},{"x":4716,"y":3878},{"x":4746,"y":3203}],[{"x":4711,"y":3881},{"x":5297,"y":4409},{"x":5288,"y":4013},{"x":4876,"y":3701}],[{"x":5297,"y":4421},{"x":5392,"y":4644},{"x":5450,"y":4510},{"x":5371,"y":4391}],[{"x":5389,"y":4650},{"x":5282,"y":5291},{"x":5560,"y":5157},{"x":5548,"y":4943}],[{"x":5290,"y":5300},{"x":5986,"y":5847},{"x":5908,"y":5620},{"x":5561,"y":5354}],[{"x":5180,"y":5393},{"x":5900,"y":6020},{"x":5498,"y":5966},{"x":5148,"y":5727}],[{"x":5969,"y":5825},{"x":5823,"y":5958},{"x":5925,"y":5956},{"x":5975,"y":5922}],[{"x":5142,"y":5403},{"x":5199,"y":5419},{"x":5194,"y":5383},{"x":5153,"y":5369}],[{"x":5290,"y":5266},{"x":5311,"y":5316},{"x":5347,"y":5299},{"x":5333,"y":5251}]]; 
     
     let aktifNoktalar = [];
+    // Klavye için basit durum
     const tuslar = { yukari: false, asagi: false, sol: false, sag: false };
 
-    // --- MATH ---
+    // --- MATEMATİK: ÇARPIŞMA ---
     function noktaPoligondaMi(x, y, poly) {
         let icinde = false;
         for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
@@ -119,7 +129,7 @@
         return true;
     }
 
-    // --- JOYSTICK ---
+    // --- ANALOG JOYSTICK (GELİŞMİŞ) ---
     const joystickBase = document.getElementById('joystick-base');
     const joystickStick = document.getElementById('joystick-stick');
     let touchId = null;
@@ -130,29 +140,33 @@
         const centerY = rect.top + rect.height / 2;
         let x = touch.clientX - centerX;
         let y = touch.clientY - centerY;
-        const distance = Math.sqrt(x * x + y * y);
+        
         const maxDist = rect.width / 2;
+        const distance = Math.sqrt(x * x + y * y);
 
+        // Joystick'i sınırla
         if (distance > maxDist) {
             const angle = Math.atan2(y, x);
             x = Math.cos(angle) * maxDist;
             y = Math.sin(angle) * maxDist;
         }
 
+        // Görseli güncelle
         joystickStick.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
-        const threshold = 15;
-        tuslar.sag = x > threshold;
-        tuslar.sol = x < -threshold;
-        tuslar.asagi = y > threshold;
-        tuslar.yukari = y < -threshold;
+
+        // Vektör Hesapla (-1 ile 1 arası normalize edilmiş yön)
+        // distance/maxDist ile joystick'i ne kadar ittiğimizi de (hız hassasiyeti) katıyoruz.
+        const normalizedX = x / maxDist;
+        const normalizedY = y / maxDist;
+        
+        inputVector = { x: normalizedX, y: normalizedY };
     }
 
     function resetJoystick() {
         touchId = null;
         joystickStick.style.transition = 'transform 0.2s';
         joystickStick.style.transform = `translate(-50%, -50%)`;
-        tuslar.yukari = false; tuslar.asagi = false;
-        tuslar.sol = false; tuslar.sag = false;
+        inputVector = { x: 0, y: 0 }; // Durdur
     }
 
     joystickBase.addEventListener('touchstart', (e) => {
@@ -174,12 +188,13 @@
 
     joystickBase.addEventListener('touchend', (e) => resetJoystick());
 
-    // --- KEYBOARD ---
+    // --- KLAVYE KONTROLLERİ ---
     document.addEventListener("keydown", (e) => {
         if(e.key === "ArrowUp") tuslar.yukari = true;
         if(e.key === "ArrowDown") tuslar.asagi = true;
         if(e.key === "ArrowLeft") tuslar.sol = true;
         if(e.key === "ArrowRight") tuslar.sag = true;
+
         if (e.key === "e" || e.key === "E") {
             editorModu = !editorModu;
             durumLabel.innerText = editorModu ? "MOD: EDİTÖR (Çizim Yap)" : "MOD: OYUN (Test Et)";
@@ -203,9 +218,8 @@
             document.getElementById("kod-cikti").value = JSON.stringify(engeller);
             ciktiKutusu.style.display = "block";
         }
-        // Updated speed keys to match new time-based system
         if (e.key >= "1" && e.key <= "9") {
-            oyuncu.hiz = parseInt(e.key) * 100; // Key 1 = 100px/s, Key 9 = 900px/s
+            oyuncu.hiz = parseInt(e.key) * 100;
             durumLabel.innerText = "HIZ: " + oyuncu.hiz; 
         }
     });
@@ -217,59 +231,109 @@
         if(e.key === "ArrowRight") tuslar.sag = false;
     });
 
-    // --- TIME-BASED GAME LOOP ---
+    // --- OYUN DÖNGÜSÜ ---
     let lastTime = 0;
 
     function oyunuGuncelle(timestamp) {
         if (!haritaResmi.complete) { requestAnimationFrame(oyunuGuncelle); return; }
         
-        // Calculate Delta Time (dt) in seconds
         if (!lastTime) lastTime = timestamp;
         const dt = (timestamp - lastTime) / 1000;
         lastTime = timestamp;
 
-        // Prevent huge jumps if the user switches tabs
-        if (dt > 0.1) {
-            requestAnimationFrame(oyunuGuncelle);
-            return;
+        if (dt > 0.1) { requestAnimationFrame(oyunuGuncelle); return; }
+
+        // 1. GİRİŞ VEKTÖRÜNÜ HESAPLA (Joystick veya Klavye önceliği)
+        let dx = inputVector.x;
+        let dy = inputVector.y;
+
+        // Eğer Joystick kullanılmıyorsa klavyeye bak
+        if (dx === 0 && dy === 0) {
+            if (tuslar.sol) dx = -1;
+            if (tuslar.sag) dx = 1;
+            if (tuslar.yukari) dy = -1;
+            if (tuslar.asagi) dy = 1;
+            
+            // Çapraz gidişte hızı eşitlemek için normalize et
+            if (dx !== 0 || dy !== 0) {
+                const length = Math.sqrt(dx*dx + dy*dy);
+                dx /= length;
+                dy /= length;
+            }
         }
 
-        let yeniX = oyuncu.x;
-        let yeniY = oyuncu.y;
+        // 2. HAREKET MANTIĞI (Kaygan duvarlar için X ve Y ayrı hesaplanır)
+        let hareketMiktariX = dx * oyuncu.hiz * dt;
+        let hareketMiktariY = dy * oyuncu.hiz * dt;
 
-        // Move amount = Speed (pixels/sec) * Time passed (sec)
-        const hareketMiktari = oyuncu.hiz * dt;
-
-        if (tuslar.yukari) yeniY -= hareketMiktari;
-        if (tuslar.asagi) yeniY += hareketMiktari;
-        if (tuslar.sol) yeniX -= hareketMiktari;
-        if (tuslar.sag) yeniX += hareketMiktari;
+        let yeniX = oyuncu.x + hareketMiktariX;
+        let yeniY = oyuncu.y + hareketMiktariY;
 
         if (editorModu) {
-             oyuncu.x = yeniX;
-             oyuncu.y = yeniY;
+            oyuncu.x = yeniX;
+            oyuncu.y = yeniY;
         } else {
+            // Önce X eksenini dene
             if (hareketSerbestMi(yeniX, oyuncu.y)) {
                 oyuncu.x = yeniX;
             }
+            // Sonra Y eksenini dene
             if (hareketSerbestMi(oyuncu.x, yeniY)) {
                 oyuncu.y = yeniY;
             }
         }
 
-        kamera.x = oyuncu.x - canvas.width / 2;
-        kamera.y = oyuncu.y - canvas.height / 2;
+        // 3. KAMERA MANTIĞI (Ölü Bölge / Deadzone)
+        // Kameranın hedeflediği alan: Ekranın %20'si kadar bir kutu olsun
+        const deadZoneW = canvas.width * 0.2; // Genişliğin %20'si
+        const deadZoneH = canvas.height * 0.2; // Yüksekliğin %20'si
+        
+        const screenCX = canvas.width / 2;
+        const screenCY = canvas.height / 2;
+
+        // Oyuncunun ekrandaki (kameraya göre) konumu
+        let playerScreenX = oyuncu.x - kamera.x;
+        let playerScreenY = oyuncu.y - kamera.y;
+
+        // Eğer oyuncu sağdaki sınıra dayandıysa kamerayı sağa kaydır
+        if (playerScreenX > screenCX + deadZoneW/2) {
+            kamera.x += (playerScreenX - (screenCX + deadZoneW/2));
+        }
+        // Eğer oyuncu soldaki sınıra dayandıysa kamerayı sola kaydır
+        else if (playerScreenX < screenCX - deadZoneW/2) {
+            kamera.x += (playerScreenX - (screenCX - deadZoneW/2));
+        }
+
+        // Aynı mantık Y ekseni için
+        if (playerScreenY > screenCY + deadZoneH/2) {
+            kamera.y += (playerScreenY - (screenCY + deadZoneH/2));
+        }
+        else if (playerScreenY < screenCY - deadZoneH/2) {
+            kamera.y += (playerScreenY - (screenCY - deadZoneH/2));
+        }
+
+        // Harita dışına çıkmayı engelle (Clamp)
         if (kamera.x < 0) kamera.x = 0;
         if (kamera.y < 0) kamera.y = 0;
         if (kamera.x > haritaResmi.width - canvas.width) kamera.x = haritaResmi.width - canvas.width;
         if (kamera.y > haritaResmi.height - canvas.height) kamera.y = haritaResmi.height - canvas.height;
 
+
+        // 4. ÇİZİM
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Harita
+        // Eğer harita ekrandan küçükse hata vermemesi için kontrol
+        const sourceW = Math.min(canvas.width, haritaResmi.width);
+        const sourceH = Math.min(canvas.height, haritaResmi.height);
+        
         ctx.drawImage(haritaResmi, kamera.x, kamera.y, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height);
 
+        // Oyuncu
         ctx.fillStyle = editorModu ? "blue" : "yellow"; 
         ctx.fillRect(oyuncu.x - kamera.x, oyuncu.y - kamera.y, oyuncu.w, oyuncu.h);
 
+        // Editör Çizgileri
         if (editorModu) {
             ctx.strokeStyle = "rgba(255, 0, 0, 0.8)";
             ctx.lineWidth = 3;
@@ -307,4 +371,3 @@
 
 </body>
 </html>
-
