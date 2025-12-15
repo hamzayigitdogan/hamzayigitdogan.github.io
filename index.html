@@ -87,11 +87,11 @@
     haritaResmi.src = "harita.jpg"; 
 
     // OYUNCU
-    const oyuncu = { x: 3100, y: 3100, w: 20, h: 20, hiz: 1 }; 
+    const oyuncu = { x: 3159, y: 5064, w: 20, h: 20, hiz: 1 }; 
     let kamera = { x: 0, y: 0 };
     
     // --- EDİTÖR DEĞİŞKENLERİ ---
-    let editorModu = true; 
+    let editorModu = false; 
     
     // Tüm engeller listesi 
     let engeller = [
@@ -294,7 +294,7 @@
         
         ctx.drawImage(haritaResmi, kamera.x, kamera.y, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height);
 
-        ctx.fillStyle = editorModu ? "yellow" : "blue"; 
+        ctx.fillStyle = editorModu ? "blue" : "yellow";
         ctx.fillRect(oyuncu.x - kamera.x, oyuncu.y - kamera.y, oyuncu.w, oyuncu.h);
 
         if (editorModu) {
@@ -334,5 +334,4 @@
 </script>
 
 </body>
-
 </html>
